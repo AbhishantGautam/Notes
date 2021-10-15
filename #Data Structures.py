@@ -17,6 +17,8 @@ list_1[2] = 4 #changes item value at index position 2
 
 list_1.append("pakistan") #adds a new item at the end of the list
 
+list_1.insert(2, "python") #inserts "python" at the 2nd index position and pushes the items after 2nd index, one unit to right.
+
 list_1.remove("item name") #removes "item name" from list
 
 list_1.extend(["sri lanka, bangladesh"]) #adds a list at the end of the list
