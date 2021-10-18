@@ -9,6 +9,8 @@
 '''
 list_1 = [1,2,3,"usa", "india"] #initiate the list
 
+list_test = [0]*5 #------------> [0,0,0,0,0]
+
 list_1[2] #returns item at the index 2 (ie 3) ---->list slicing
 
 list_1[-2] #returns the item at index {len(list_1) - 2}
