@@ -20,6 +20,7 @@
     # 1)load and prepare data
     # 2)run python logics
     # 3)prepare and return response data (eg: HTML)
+from django.db.models.expressions import F
 from django.http import HttpResponse, response
 def index(request):
     return HttpResponse("this works") #simplest view
@@ -293,3 +294,151 @@ class Book(models.Model):
         return reverse("book-detail",args=[self.id])
 book = Book.objects.get(pk=id)
 # <a href="{{book.get_absolute_url}}">{{book.title}}</a>
+#slug notation : mywebsite/posts/harry-potter-and-the-goblet-of-fire
+from django.utils.text import slugify
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    author = models.CharField(null=True, max_length=10)
+    is_bestselling = models.BooleanField(default=False)
+    slug = models.SlugField(default="", null=False, db_index=True) #creates a new column in the table, with heading "slug"
+    def save(self,*args,**kwargs): #over-riding the save function
+        self.slug = slugify(self.title) #fills the slug field of table with the slugified version of title
+        super().save(*args,**kwargs) #conventional save() function
+#now make migrations and migrate
+#python manage.py shell
+# from book_outlet.models import Book
+# Book.objects.get(title = "harry potter").save() #saves the data entry as well as populates the slug field with the slugified version of title.
+# Book.objects.get(title = "harry potter").slug #-------->harry-potter
+#we can also use aggregate functions in django by:
+from django.db.models import Avg
+books = Book.objects.all()
+num_books = books.count()
+avg_rating = books.aggregate(Avg("rating"))
+#we can also order the entries wrt a particular column:
+books = Book.objects.all().order_by("title") #sorts entries by alphabetically increasing order of title.
+#Admin Panel
+# in terminal write:
+'''
+python manage.py createsuperuser
+Username : Abhishant
+Email address : abhishantgautam10@gmail.com
+password : abhishant@1998
+password again : abhishant@1998
+# now login wuth these credentials
+'''
+#we also need to tell django what data we need to administer via admin panel
+'''
+Go to app folder, and open the admin.py file and write:
+from django.contrib import admin
+from .models import Book
+admin.site.register(Book)
+'''
+#if we dont want a particular field to show up in admin panel, do:
+slug = models.SlugField(default="", blank=True, editable=False, null=False, db_index=True) #this makes it disappear from admin panel
+#if we want the field to be visible on admin screen, but make it uneditable.
+class BookAdmin(admin.ModelAdmin):
+    readonly_fields = ("slug")
+            #OR
+class BookAdmin(admin.ModelAdmin):
+    prepopulated_fields = {"slug":("title",)} #-----> slug is formed side by side when title is filled
+#Creating a filtering option in admin panel
+class BookAdmin(admin.ModelAdmin):
+    list_filter = ("author", "rating") #--->creates a side bar where we can filter wrt author, or rating
+#to display multiple columns in admin panel:
+class BookAdmin(admin.ModelAdmin):
+    list_display = ("title", "author")
+#Creating relation between various tables:
+class Author(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length= 50)
+class Book(models.Model):
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, null=True) #just like charfield and integerfield, this is also datatype 
+    # of table, which connects two tables, hence all its attributes are that of a connecting link and not that of something like an integer or charfield like maxlength.
+    is_bestselling = models.BooleanField(default=False)
+#in terminal write:
+# from book_outlet.models import Book,Author
+# jkrowling = Author(first_name="jk", last_name="rowling")
+# jkrowling.save()
+# hp1 = Book(title="harry potter", rating=5, is_bestselling=True, author=jkrowling)
+# hp1.save()
+# Book_1 = Book.objects.get(title="harry potter".author.first_name) #------------>jk
+#To find all books with author having last name = rowling:
+books_by_rowling = Book.objects.filter(author__last_name="rowling")
+# we can also other ORM methods:
+books_by_rowling = Book.objects.filter(author__last_name__contains="wling")
+#To find all books by an author:
+jkr = Author.objects.get(first_name = "jk")
+jkr.book_set.all() #--------------> query set of all books by author jk
+#in the background, django creates a seperate column/attribute in "Author" table called "book_set", and in that column it adds the related information from the Book "table".
+#it is easy to access attributes of table2 by table1 if table1 has the foreign key. however, if table1 has the foreign key, and we want to access table1's data from table2, we would need to create an additional attribute (book_set) which will act as a foreign key for table2.
+#we can change this attribute name by : 
+    # author = models.ForeignKey(Author, on_delete=models.CASCADE, null=True, related_name="books")
+#One-One relation:
+class Address(models.Model):
+    street = models.CharField(max_length=80)
+    postal_code = models.CharField(max_length=6)
+    city = models.CharField(max_length=50)
+class Author(models.Model):
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    address = models.OneToOneField(Address, on_delete=models.CASCADE, null=True)
+# ie: an author has only one address, and in every address lives only one author.
+# now make migrations and migrate
+# in terminal write:
+addr1 = Address(street = "A", postal_code="PCA", city="CA")
+addr1.save()
+jkr = Author.objects.get(first_name="jk", last_name="rowling", address=addr1)
+jkr.save()
+jkr.address.street #-------> A
+#finding author's first name that lives in addr1:
+# here also, it is easy to access content in Address table via Author table, as Author table has the foreign key. but to access contents in Author table via Address table, we need to create a new attribute.
+Address.objects.all()[0].author.first_name #--->jk
+#in the background django creates a new attribute called author inside the address table which acts as the foreign key.
+#in admin panel database names are written as Authors,Books,Addresss(ie: adds another s at the end)
+#to avoid this :
+class Address(models.Model):
+    street = models.CharField(max_length=80)
+    postal_code = models.CharField(max_length=6)
+    city = models.CharField(max_length=50)
+    class Meta:
+        verbose_name_plural = "address Entries"
+    #now in admin panel it is printed "address entries".. and not addresss
+#Many-Many relation:
+class Country(models.Model):
+    country_name = models.CharField(max_length=50)
+    code = models.CharField(max_length=2)
+class Book:
+    title = models.CharField(max_length=50)
+    rating = models.IntegerField()
+    published_countries = models.ManyToManyField(Country, null=False)
+#we dont have an on_delete parameter here because for many-many relation, in background django creates a 3rd table including the linking data between 2 tables. Now whenever a change is made, it affects only this 3rd table, and the original 2 tables remain untouched.
+#in terminal:
+germany = Country(name="germany", code="DE")
+germany.save()
+mys = Book.objects.all()[1]
+mys.pubished_countries.add(germany)
+#as this is a many to many relation, published_countries attribute is not a single value, rather it is a list of values (therefore, we can actually append values to this list rather than assigning it a single value)
+#finding books which were published in a country:
+ger = Country.objects.all()[0]
+ger.book_set.all() #similarily here, Country doesnt have a foreign key, so an attribute is added to it called "book_set" which acts as the forign key
+#db_index : use when you have a table column which should be used as a primary key and thus needs indexing
+#null= True : allows entries in database to be null
+#blank = True : doesnt give an error when an entry in the form is left empty
+#default = "smth" : if an entry is missing in database, that entry is automatically assigned the value "smth"
+#on_delete = CASCADE #when we delete an entry, all the related data from other table is also deleted
+#Forms:
+'''
+<body>
+    <form action="/username-entered" method="POST">
+    {% csrf_token %}
+        <label for="username">Your name</label>
+        <input id="username" name="username" type="text">
+        <button type="submit">Send</button>
+    </form>
+'''
+#action : takes user to localhost:8000/username-entered when Send button is clicked
+#method = "POST" : sets the request to the server as POST request instead of the default GET request
+#csrf token : 
