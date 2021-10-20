@@ -441,4 +441,104 @@ ger.book_set.all() #similarily here, Country doesnt have a foreign key, so an at
 '''
 #action : takes user to localhost:8000/username-entered when Send button is clicked
 #method = "POST" : sets the request to the server as POST request instead of the default GET request
-#csrf token : 
+#Cross Site Request Forgery : when you visit your bank's website, and login to your account. your credentials are stored in your cookies.
+#Now this cookie will be available to all the websites you will visit. Now suppose you visit a malacious website, which has a good post, and you want to comment on it.
+#now you write your comment and click the "submit" button. As soon as you click the submit button a post request is sent to the bank's website containing your bank's detail.
+#now the hacker has access to your bank account. Now hacker can transfer the required amount of money to his bank account without you knowing.
+# this can be done in two ways : GET request, POST request
+# GET:
+'''
+--Alice wishes to transfer Rs.100 to Bob using the bank.com web application that is vulnerable to CSRF. Maria, an attacker, wants to trick Alice into sending the money to Maria instead.
+--Alice is currently logged in to bank.com. Now whenever she enters the url : GET http://bank.com/transfer.do?acct=BOB&amount=100 HTTP/1.1, Rs.100 will be transfered to Bob.
+--for maria to get those 100Rs, she just needs alice to enter url : GET http://bank.com/transfer.do?acct=MARIA&amount=100 HTTP/1.1
+--for that she can send her a link on whatsapp that redirects her to the above url, and money will be transfered
+'''
+#POST:
+'''
+-- Now just Alice visiting that url wont do the job. For the transfer of money, Alice now needs to visit POST http://bank.com/transfer.do HTTP/1.1, and there send a post request with acct=Maria&amount=100
+-- This POST request can be sent via a customized form by maria, where the acct="Maria" & amount=100000 fields are hidden. when alice presses "submit" button post request in sent to POST http://bank.com/transfer.do HTTP/1.1.with acct=Maria&amount=100
+-- And then the money will be deducted.
+'''
+#To avoid this use CSRF token. This checks that the post request is coming from a form created by bank.com, not from the form created by Maria.
+#Each form has its own csrf token, and when a post request is made to the server, it first checks for this csrf token and then processes the request.
+#Retrieving data that the user entered in the form:
+def review(request):
+    if request.method == "POST":
+        entered_username = request.POST["username"]
+        print(entered_username)
+        return HttpResponseRedirect("/thankyou")
+    else:
+        return render(request,"reviews/review.html")
+#validating forms:
+def review(request):
+    if request.method == "POST":
+        entered_username = request.POST["username"]
+        if entered_username == "" and len(entered_username)>100:
+            return render(request,"reviews/review.html",{
+                "has_error" : True
+            })
+        print(entered_username)
+        return HttpResponseRedirect("/thankyou")
+    else:
+        return render(request,"reviews/review.html", {
+            "has_error":False
+        })
+# {% if has_error = True %}
+#     <h1>Invalid entry! Try again</h1>
+# {% endif %}
+#Better way to do this:
+# 1)Create a new app folder called "forms.py", and in that write:
+from django import forms
+class ReviewForm(forms.Form):
+    user_name = forms.CharField()
+# now in views.py write:
+# from .forms import ReviewForm
+def review(request):
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            print(form.cleaned_data)
+            return render(request,"reviews/review.html",{
+                "form" : form
+            })
+# {% csrf_token %}
+# {{form}}
+#.is_valid() is a method for forms, which does 3 things:
+#  1)validates data that was entered
+#  2)returns True if data is valid
+#  3)creates an attribute for the form object called "cleaned list", which is a dictionary that stores all the data entered by user.
+#if user enters invalid data, but instead of starting afresh, we want to prepopulate fields that were valid, we can do:
+def review(request):
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            print(form.cleaned_data)
+            return HttpResponseRedirect("/thankyou")
+        else:
+            form = ReviewForm()
+        return render (request,"reviews/review.html",{
+            "form" : form
+        })
+#customizing the form:
+class ReviewForm(forms.Form):
+    user_name = forms.CharField(label="your name", required=True, max_length=100, error_messages={
+        "required" : "your name must not be empty",
+        "max_length" : "please enter a shorter name"
+    })
+#By default the layout of the form is like : 
+# label 
+# error
+# input box
+#to change this order and tweek into each component:
+# {% csrf_token %}
+# {{form.user_name.label_tag}}---------->label
+# {{form.user_name}}-------------------->input box
+# {{form.user_name.errors}}------------->error
+#adding more inputs to database:
+class ReviewForm(forms.Form):
+    user_name = forms.CharField(label="your name", required=True, max_length=100, error_messages={
+        "required" : "your name must not be empty",
+        "max_length" : "please enter a shorter name"
+    })
+    review_text = forms.CharField(label="your feedback", widget=forms.Textarea, max_length=500)
+    rating = forms.IntegerField(label="your rating", min_value=1, max_value=5)
