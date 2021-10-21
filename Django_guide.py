@@ -515,7 +515,7 @@ def review(request):
             print(form.cleaned_data)
             return HttpResponseRedirect("/thankyou")
         else:
-            form = ReviewForm()
+            form = ReviewForm(request.POST)
         return render (request,"reviews/review.html",{
             "form" : form
         })
@@ -542,3 +542,61 @@ class ReviewForm(forms.Form):
     })
     review_text = forms.CharField(label="your feedback", widget=forms.Textarea, max_length=500)
     rating = forms.IntegerField(label="your rating", min_value=1, max_value=5)
+#adding userinput from forms to database:
+from django.db import models
+class Review(models.Model):
+    user_name = models.CharField(max_length=100)
+    review_text = models.TextField()
+    rating = models.IntegerField()
+# from .forms import ReviewForm
+def review(request):
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+# from .models import Review
+#     if form.is_valid():
+#         review = Review(user_name = form.cleaned_data["user_name"],
+#         review_text = form.cleaned_data["review_text"],
+#         rating = form.cleaned_data["rating"])
+#         return HttpResponseRedirect("/thankyou")
+#now fill the form and submit it
+#now in shell write: from reviews.models import Review
+                   # Review.objects.all()[0].user_name
+#We created a table called "Review" and a form called "ReviewForm". We give both of them the same attributes. Users input data in the form, and with the help of a view called "review()" we assign values to table which we got from the form
+#ModelForms: creating a form with the help of a table. ie: with this we dont need to define ReviewForm's attributes, it will inherit them from Review table
+# from .models import Review
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ["user_name", "review_text", "rating"]
+        fields = "__all__"
+        exclude = ["user_name"]
+        labels={
+            "user_name" : "your name",
+            "review_text" : "your feedback",
+            "rating" : "your rating"
+        }
+        error_messages = {
+            "user_name" : {
+                "required" : "your name must not be empty",
+                "max_length" : "please enter short name"
+            }
+        }
+def review(request):
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect("/thankyou")
+    else:
+        form = ReviewForm(request.POST)
+    return render (request,"reviews/review.html",{
+            "form" : form
+        })
+# updating an existing entry:
+def review(request)        :
+    if request.method == "POST":
+        existing_data = Review.objects.get(pk=1)
+        form = ReviewForm(request.POST, instance=existing_data)
+        if form.is_valid():
+            form.save()
+            return HttpResponseRedirect("/thankyou")
