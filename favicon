@@ -1,0 +1,6 @@
+how to add favicon to your website:
+1) go to settings, under installed apps, check if 'django.contrib.staticfiles' is there.
+2) scroll down, under STATIC_URL='/static/', write: STATICFILES_DIRS = [BASE_DIR/ 'static']
+3) in your project root folder create a folder called static, inside that add your .ico file
+4) go to your website base html template, and there in <head> section, just below title, add : <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.ico' %}"/>
+5) on the top write: {% load static %}
