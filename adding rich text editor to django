@@ -1,0 +1,18 @@
+pip install django-ckeditor
+
+models.py:
+from ckeditor.fields import RichTextField
+now replace "body = models.TextField()
+with "body = RichTextField(blank=True, null=True)
+
+now make migrations and migrate
+
+settings.py:
+under installed apps, add 'ckeditor'
+
+change html to :
+{% csrf_token %}
+{{form.media}}
+{{form.as_p}} ---------> converts data from form to HTML
+
+{{post.body|safe}} ----> " |safe "converts HTML to rich text
