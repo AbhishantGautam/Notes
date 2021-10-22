@@ -114,6 +114,7 @@ def someview(request,challenge_text):
 # </ul>  ----> similarily we can do for conditional statements. -----------> use of tags
 #url keyword: same as reverse, used to build valid urls by giving value to the dynamic segment, but this is used in html file.
 # <a href="{% url'month-challenge'month %}">link to homepage </a>
+#if you dont have any parameter (like month), simply write: <a href="{% url 'month-challenge' %}">link to homepage </a>
 #Template Inheritance: we can inherit our html file from a base html file and make improvements to it depending on the type of webpage we want
 # 1) create a folder called "templates" at the same level as manage.py
 # 2) inside it create a file called "base.html"
